@@ -1,0 +1,7 @@
+node_modules/
+dist/
+release/
+*.tsbuildinfo
+.env
+a2b.json
+screenshots/

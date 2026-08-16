@@ -1,0 +1,73 @@
+{
+  "name": "anything-to-blocks",
+  "version": "0.1.0",
+  "description": "Convert any website into WordPress Gutenberg blocks. Browse a site, select DOM regions, and generate block markup with an ACP agent connected to WordPress via MCP.",
+  "type": "module",
+  "main": "./dist/electron/main.js",
+  "scripts": {
+    "build": "tsc && node scripts/copy-preload.mjs",
+    "dev": "tsc --watch",
+    "start": "electron ./dist/electron/main.js",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src",
+    "clean": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\"",
+    "dist": "npm run build && electron-builder",
+    "ci": "npm run typecheck && npm run lint && npm run build"
+  },
+  "author": {
+    "name": "guzmandrade-dev",
+    "email": "117118816+guzmandrade-dev@users.noreply.github.com"
+  },
+  "dependencies": {
+    "@agentclientprotocol/sdk": "^1.3.0",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.6",
+    "@types/node": "^26.1.1",
+    "electron": "^43.1.1",
+    "electron-builder": "^26.15.3",
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.7.0",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.0.0"
+  },
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "build": {
+    "appId": "com.a2b.desktop",
+    "productName": "Anything to Blocks",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "public/**/*",
+      "node_modules/**/*"
+    ],
+    "extraMetadata": {
+      "main": "./dist/electron/main.js"
+    },
+    "win": {
+      "target": "nsis",
+      "artifactName": "${productName}-${version}-${arch}-setup.${ext}"
+    },
+    "mac": {
+      "target": [
+        { "target": "dmg", "arch": ["x64", "arm64"] },
+        { "target": "zip", "arch": ["x64", "arm64"] }
+      ],
+      "category": "public.app-category.developer-tools",
+      "artifactName": "${productName}-${version}-${arch}.${ext}"
+    },
+    "linux": {
+      "target": ["AppImage", "deb"],
+      "category": "Development",
+      "artifactName": "${productName}-${version}-${arch}.${ext}"
+    }
+  },
+  "license": "MIT"
+}

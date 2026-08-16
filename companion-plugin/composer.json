@@ -1,0 +1,20 @@
+{
+    "name": "wordpress/a2b-companion",
+    "description": "Companion WordPress plugin for Anything to Blocks — registers MCP abilities for block, pattern, and template introspection.",
+    "type": "wordpress-plugin",
+    "license": "GPL-2.0-or-later",
+    "require": {
+        "php": ">=7.4",
+        "wordpress/mcp-adapter": "^0.5.0"
+    },
+    "require-dev": {
+        "automattic/jetpack-autoloader": "^3.0"
+    },
+    "extra": {
+        "wordpress-plugin": {
+            "name": "Anything to Blocks Companion"
+        }
+    },
+    "minimum-stability": "dev",
+    "prefer-stable": true
+}

@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Anything to Blocks</title>
+  <link rel="stylesheet" href="style.css?v=1">
+</head>
+<body>
+  <!-- ===== Title Bar ===== -->
+  <header id="app-header">
+    <div id="title-bar">
+      <button id="sidebar-toggle" class="btn btn-ghost btn-icon" title="Toggle WordPress sidebar">☰</button>
+      <span id="project-title">Anything to Blocks</span>
+      <span id="current-url" class="current-url"></span>
+      <span id="status-text" class="status"></span>
+    </div>
+  </header>
+
+  <!-- ===== Settings Modal ===== -->
+  <div id="settings-modal" class="modal-overlay" style="display:none;">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Settings</h2>
+        <button id="close-settings-btn" class="btn btn-ghost btn-icon">×</button>
+      </div>
+      <div id="settings-form">
+        <fieldset>
+          <legend>ACP Agent</legend>
+          <label>
+            Agent command
+            <span class="field-hint">Any ACP-compatible agent, e.g. <code>opencode</code> or <code>goose</code>.</span>
+            <input type="text" id="settings-command" placeholder="opencode">
+          </label>
+          <label>
+            Agent arguments
+            <input type="text" id="settings-args" placeholder="acp">
+          </label>
+          <label>
+            Environment variables
+            <textarea id="settings-env" placeholder="KEY=value (one per line)" rows="3"></textarea>
+          </label>
+          <label>
+            Block generation prompt
+            <span class="field-hint">System prompt used when converting a region to Gutenberg blocks.</span>
+            <textarea id="settings-block-prompt" rows="6"></textarea>
+          </label>
+        </fieldset>
+        <fieldset>
+          <legend>WordPress Connection</legend>
+          <label>
+            Site URL
+            <input type="text" id="settings-wp-url" placeholder="https://example.com">
+          </label>
+          <label>
+            Username
+            <input type="text" id="settings-wp-user" placeholder="admin">
+          </label>
+          <label>
+            Application Password
+            <span class="field-hint">Generate via <strong>Users → Profile → Application Passwords</strong> in WordPress admin.</span>
+            <input type="password" id="settings-wp-pass" placeholder="xxxx xxxx xxxx xxxx xxxx xxxx">
+          </label>
+          <label>
+            MCP Endpoint (optional)
+            <span class="field-hint">Defaults to <code>/wp-json/mcp/mcp-adapter-default-server</code></span>
+            <input type="text" id="settings-wp-mcp" placeholder="/wp-json/mcp/mcp-adapter-default-server">
+          </label>
+        </fieldset>
+        <div id="settings-actions">
+          <button id="save-settings-btn" class="btn btn-primary">Save</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== Main Workspace ===== -->
+  <div id="workspace">
+    <!-- WordPress Sidebar -->
+    <aside id="wp-sidebar">
+      <div id="wp-sidebar-resize-handle" title="Drag to resize"></div>
+      <div id="wp-sidebar-header">
+        <span class="panel-title">WordPress</span>
+        <button id="wp-refresh-btn" class="btn btn-small btn-ghost" title="Refresh">↻</button>
+      </div>
+      <div id="wp-sidebar-content">
+        <div id="wp-not-configured" class="wp-empty">
+          <p>No WordPress site configured.</p>
+          <p class="hint">Open <strong>File → Settings</strong> to set up your WordPress connection.</p>
+        </div>
+        <div id="wp-info" style="display:none;">
+          <div class="wp-section" id="wp-site-section">
+            <div class="wp-section-title">Site</div>
+            <div id="wp-site-info"></div>
+          </div>
+          <div class="wp-section" id="wp-theme-section">
+            <div class="wp-section-title">Active Theme</div>
+            <div id="wp-theme-info"></div>
+          </div>
+          <div class="wp-section" id="wp-plugins-section">
+            <div class="wp-section-title">Plugins (<span id="wp-plugin-count">0</span>)</div>
+            <div id="wp-plugin-list"></div>
+          </div>
+          <div class="wp-section" id="wp-blocks-section">
+            <div class="wp-section-title">Block Types (<span id="wp-block-count">0</span>)</div>
+            <div id="wp-block-list"></div>
+          </div>
+          <div class="wp-section" id="wp-patterns-section">
+            <div class="wp-section-title">Patterns (<span id="wp-pattern-count">0</span>)</div>
+            <div id="wp-pattern-list"></div>
+          </div>
+          <div class="wp-section" id="wp-templates-section">
+            <div class="wp-section-title">Templates (<span id="wp-template-count">0</span>)</div>
+            <div id="wp-template-list"></div>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Browser Panel -->
+    <div id="browser-panel">
+      <div id="browser-toolbar">
+        <div class="toolbar-group">
+          <button id="browser-back" class="btn btn-icon" title="Back">‹</button>
+          <button id="browser-forward" class="btn btn-icon" title="Forward">›</button>
+          <button id="browser-reload" class="btn btn-icon" title="Reload">⟳</button>
+        </div>
+        <input type="text" id="url-input" placeholder="Enter a URL to browse...">
+        <button id="url-go" class="btn btn-small">Go</button>
+        <div class="toolbar-divider"></div>
+        <button id="picker-toggle" class="btn btn-small btn-outline" title="Toggle element picker">
+          🎯 Pick Element
+        </button>
+      </div>
+      <div id="browser-container">
+        <!-- The WebContentsView is rendered behind this transparent area.
+             The frontend reports bounds to Electron so the native view is positioned correctly. -->
+        <div id="browser-placeholder">
+          <p>Enter a URL above to start browsing.</p>
+          <p class="hint">Once a page loads, use <strong>🎯 Pick Element</strong> to select a region.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Region Conversations Panel -->
+    <div id="conversations-panel">
+      <div id="conversations-header">
+        <span class="panel-title">Regions</span>
+        <span id="region-count" class="hint"></span>
+      </div>
+      <div id="conversations-list">
+        <div id="no-regions" class="conversations-empty">
+          <p>No regions selected yet.</p>
+          <p class="hint">Browse a page and use <strong>🎯 Pick Element</strong> to select a DOM region. Each selected region gets its own conversation for block generation.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js?v=1"></script>
+</body>
+</html>
