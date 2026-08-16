@@ -34,6 +34,7 @@ const conversationsPanel = $("conversations-panel");
 
 // Settings modal
 const settingsModal = $("settings-modal");
+const settingsMigrationMode = $("settings-migration-mode");
 const settingsCommand = $("settings-command");
 const settingsArgs = $("settings-args");
 const settingsEnv = $("settings-env");
@@ -71,6 +72,7 @@ async function loadAppConfig() {
     appConfig = await window.a2b.getConfig();
   }
   // Populate settings form
+  settingsMigrationMode.value = appConfig.agent?.migrationMode ?? "structure";
   settingsCommand.value = appConfig.agent?.command ?? "opencode";
   settingsArgs.value = appConfig.agent?.args ?? "acp";
   settingsEnv.value = appConfig.agent?.env ?? "";
@@ -87,6 +89,7 @@ async function saveAppConfig() {
       command: settingsCommand.value.trim() || "opencode",
       args: settingsArgs.value.trim() || "acp",
       env: settingsEnv.value.trim(),
+      migrationMode: settingsMigrationMode.value,
       blockPrompt: settingsBlockPrompt.value.trim(),
     },
     wordpress: {

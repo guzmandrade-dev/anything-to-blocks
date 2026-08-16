@@ -24,6 +24,9 @@ blocks, patterns, or custom blocks registered on your WordPress site.
   blocks, patterns, and templates are available
 - 🎨 **WordPress sidebar** — view active theme, installed plugins, registered
   blocks, patterns, and templates
+- 🔄 **Migration modes** — **Structure mode** (default) extracts layout and
+  content while letting the target WordPress theme provide the visual design;
+  **Visual 1:1 mode** replicates the source appearance for exact migrations
 
 ## Quick Start
 
@@ -54,10 +57,19 @@ On first launch, click the **Settings** button (gear icon) to configure:
 
 | Field | Description | Default |
 |-------|-------------|---------|
+| Migration mode | `structure` (extract layout, let target theme style it) or `visual` (1:1 match) | `structure` |
 | Command | Agent process command | `opencode` |
 | Args | Agent arguments | `["acp"]` |
 | Environment | Additional env vars | `{}` |
-| Block Prompt | System prompt for block generation | Built-in expert prompt |
+| Block Prompt | System prompt for block generation (auto-selected based on migration mode) | Built-in expert prompt |
+
+> **Migration mode** is the key design decision: the common migration scenario
+> is a new WordPress with a refreshed design but the same content structure.
+> In **Structure mode** (default), the agent extracts layout and content
+> hierarchy from the source but lets the target WordPress theme provide the
+> visual styling — no hardcoded colors, fonts, or spacing. In **Visual 1:1
+> mode**, the agent replicates both structure and appearance from the source,
+> which is useful for exact migrations.
 
 #### WordPress Connection
 
@@ -118,13 +130,16 @@ User selects element
     ↓
 App captures:
   - Screenshot of the element region
-  - DOM structure (tag, classes, attributes, computed styles, outer HTML)
-  - WordPress site info (available blocks, patterns, templates)
+  - DOM structure (tag, classes, attributes, outer HTML)
+  - Layout styles (structure mode) or full computed styles (visual mode)
+  - WordPress site info (available blocks, patterns, templates, theme)
     ↓
 ACP agent receives context as content blocks
   (image + text + WordPress info via MCP)
     ↓
-Agent generates Gutenberg block markup
+Agent generates Gutenberg block markup:
+  - Structure mode → semantic blocks inheriting target theme styles
+  - Visual mode → blocks with inline styles matching source appearance
     ↓
 User iterates: "make it a pattern", "use columns", etc.
     ↓
@@ -161,12 +176,26 @@ See [companion-plugin/readme.txt](companion-plugin/readme.txt) for details.
 - ✅ WordPress site info via REST API
 - ✅ WordPress MCP integration via companion plugin
 
-### V2 (Future)
-- 📋 Full theme generation from a URL — scrape multiple pages, analyze design
-  system, generate `theme.json`, templates, template parts, and patterns
-- 📦 Package as downloadable block theme zip
-- 🔄 Block markup validation and live preview
-- 🏷️ Pattern library — save generated blocks as reusable patterns
+### V2 (Future — Incremental, Not Replacement)
+
+All V2 features are designed to **extend** the target WordPress, not replace
+existing content:
+
+- 📋 **Push patterns & templates** — use the WordPress REST API to create new
+  block patterns and templates in the target site (alongside existing ones)
+- 🧩 **Custom block generation** — when a source structure can't be replicated
+  with available core blocks, patterns, or custom blocks, generate a custom
+  block plugin for the target site to install (additive — new block type
+  registered alongside existing ones)
+- 🎨 **Theme & `theme.json` extension** — generate a child theme or block theme
+  variant that extends the current theme. Merge new style presets (colors,
+  typography, spacing) into `theme.json` without overwriting existing settings.
+  Add new templates and template parts as additional options.
+- 📦 **Package as downloadable block theme zip** — export generated templates,
+  patterns, and styles as a standalone theme package
+- 🔄 **Block markup validation and live preview**
+- 🏷️ **Pattern library** — save generated blocks as reusable patterns on the
+  target WordPress site
 
 ## License
 

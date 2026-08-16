@@ -4,6 +4,7 @@ import { spawnAgentProcess, type AgentProcess } from "./agent-process.js";
 import { buildContextContent } from "./context.js";
 import type { AcpSession, ChatRequest, GenerateBlockRequest } from "./types.js";
 import type { AgentConfig, WordPressConfig } from "../config.js";
+import { getDefaultPrompt } from "../config.js";
 
 export interface AcpClientOptions {
   agent: AgentConfig;
@@ -83,6 +84,17 @@ export class AcpClient {
     return null;
   }
 
+  private getEffectivePrompt(): string {
+    const { blockPrompt, migrationMode } = this.options.agent;
+    // If the user has customized the prompt, use it as-is.
+    // If it's still the default, use the mode-appropriate default.
+    const defaultPrompt = getDefaultPrompt(migrationMode);
+    if (blockPrompt && blockPrompt.trim() !== getDefaultPrompt("structure").trim() && blockPrompt.trim() !== getDefaultPrompt("visual").trim()) {
+      return blockPrompt;
+    }
+    return defaultPrompt;
+  }
+
   async prompt(session: AcpSession, request: ChatRequest): Promise<PromptResult> {
     const active = this.sessions.get(session.id);
     if (!active) throw new Error("Session not found");
@@ -101,7 +113,8 @@ export class AcpClient {
         region,
         wordpressInfo: session.wordpressInfo,
         conversation,
-        systemPrompt: this.options.agent.blockPrompt
+        systemPrompt: this.getEffectivePrompt(),
+        migrationMode: this.options.agent.migrationMode
       })
     ];
 
@@ -134,7 +147,8 @@ export class AcpClient {
         region,
         wordpressInfo: session.wordpressInfo,
         conversation,
-        systemPrompt: this.options.agent.blockPrompt
+        systemPrompt: this.getEffectivePrompt(),
+        migrationMode: this.options.agent.migrationMode
       })
     ];
 

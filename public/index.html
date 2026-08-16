@@ -28,6 +28,14 @@
         <fieldset>
           <legend>ACP Agent</legend>
           <label>
+            Migration mode
+            <span class="field-hint"><strong>Structure</strong> (default): Extract layout &amp; content from the source; let the target WordPress theme provide the visual design. <strong>Visual 1:1</strong>: Replicate both structure and appearance from the source.</span>
+            <select id="settings-migration-mode">
+              <option value="structure">Structure (new design, same content)</option>
+              <option value="visual">Visual 1:1 (exact match)</option>
+            </select>
+          </label>
+          <label>
             Agent command
             <span class="field-hint">Any ACP-compatible agent, e.g. <code>opencode</code> or <code>goose</code>.</span>
             <input type="text" id="settings-command" placeholder="opencode">

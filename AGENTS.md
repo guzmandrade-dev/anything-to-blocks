@@ -13,6 +13,41 @@ The app is modeled after [visual-research-pal](https://github.com/anthropics/vis
 replacing the PDF viewer with a browser panel and the research report with
 Gutenberg block markup generation.
 
+## Three-Entity Model
+
+The app operates on three distinct entities:
+
+1. **Source URL** — any website (WordPress, Drupal, static HTML, etc.).
+   Loaded in the embedded browser. Read-only: we only extract visual and
+   structural data via the element picker.
+
+2. **Target WordPress** — the user's WordPress site. Connected via REST API
+   (sidebar info display) and MCP (agent queries available blocks, patterns,
+   templates). This is the *destination* where generated blocks will land.
+
+3. **The user** — runs the app, selects regions, reviews agent output, copies
+   block markup into the target WordPress. Currently manual; future versions
+   will push patterns/templates directly via REST API.
+
+**Incremental principle:** All future features (custom blocks, patterns,
+templates, theme.json) extend the target WordPress. They add to what exists —
+they never replace the current theme or overwrite existing content.
+
+**Structure-over-visual principle:** The common migration scenario is: new
+WordPress with a refreshed design, same content structure. The agent extracts
+*layout and content hierarchy* from the source but lets the *target theme*
+dictate the visual design (colors, typography, spacing). A "Visual 1:1" mode
+is available for rare cases where the target must match the source appearance
+exactly. This is controlled by the `migrationMode` config option.
+
+* **Structure mode (default):** The agent receives only layout-relevant CSS
+  properties (display, flex-direction, grid-template-columns, etc.) and is
+  instructed to use semantic blocks that inherit theme styles. No hardcoded
+  colors, fonts, or spacing.
+* **Visual mode:** The agent receives full computed styles and is instructed
+  to replicate the source appearance, using inline styles where the target
+  theme doesn't provide matching presets.
+
 ## Architecture
 
 ```
