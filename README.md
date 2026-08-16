@@ -3,7 +3,42 @@
 > Browse any website, select DOM regions, and convert them into WordPress
 > Gutenberg blocks with an AI agent connected to WordPress via MCP.
 
-![Architecture](docs/architecture.png)
+```mermaid
+graph TB
+    subgraph "Electron App"
+        WP["WordPress Sidebar<br/>(left)"]
+        BR["Browser Panel<br/>(center)"]
+        RC["Region Conversations<br/>(right)"]
+    end
+
+    subgraph "Express Server (in-process)"
+        API["REST API<br/>/api/session · /api/browser · /api/region · /api/wordpress"]
+    end
+
+    subgraph "ACP Client"
+        AG["Agent Process<br/>(opencode / goose)"]
+        CTX["Context Builder<br/>screenshot + DOM + WP info"]
+    end
+
+    subgraph "WordPress Target"
+        REST["REST API<br/>theme · plugins · blocks"]
+        MCP["MCP Adapter<br/>+ Companion Plugin"]
+    end
+
+    SRC["Source URL<br/>(any website)"]
+
+    SRC -->|"load URL"| BR
+    BR -->|"element picker"| RC
+    RC -->|"chat / generate"| API
+    API --> AG
+    CTX --> AG
+    AG -->|"MCP query"| MCP
+    API -->|"REST query"| REST
+    REST --> WP
+    MCP --> WP
+
+    AG -->|"block markup"| RC
+```
 
 **anything-to-blocks** is an Electron desktop app that bridges web browsing and
 WordPress block editing. Load any URL, pick an element from the page, and an
