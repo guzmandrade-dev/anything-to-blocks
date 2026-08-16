@@ -1,7 +1,7 @@
 {
   "name": "anything-to-blocks",
   "version": "0.1.0",
-  "description": "Convert any website into WordPress Gutenberg blocks. Browse a site, select DOM regions, and generate block markup with an ACP agent connected to WordPress via MCP.",
+  "description": "Browse any website, select DOM regions, and convert them into WordPress Gutenberg blocks using an AI agent connected to your WordPress site via MCP — preserving content structure while adopting the target theme's design language.",
   "type": "module",
   "main": "./dist/electron/main.js",
   "scripts": {
