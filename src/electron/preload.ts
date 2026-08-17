@@ -11,6 +11,7 @@ const api = {
   getUrl: () => ipcRenderer.invoke("browser:getUrl"),
   setBounds: (sidebarWidth: number, headerHeight: number, toolbarHeight: number, innerWidth: number) =>
     ipcRenderer.invoke("browser:setBounds", { sidebarWidth, headerHeight, toolbarHeight, innerWidth }),
+  setVisible: (visible: boolean) => ipcRenderer.invoke("browser:setVisible", visible),
   getConfig: () => ipcRenderer.invoke("config:get"),
   setConfig: (config: Record<string, unknown>) => ipcRenderer.invoke("config:set", config),
   onNavigated: (callback: (url: string) => void) => {

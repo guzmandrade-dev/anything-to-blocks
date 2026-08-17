@@ -15,7 +15,7 @@ interface AppConfig {
 let configCache: AppConfig | null = null;
 
 let mainWindow: BrowserWindow | null = null;
-let browserView: WebContentsView | null = null;
+let browserView: (WebContentsView & { _lastBounds?: Electron.Rectangle }) | null = null;
 let serverPort = 0;
 
 async function getConfigPath(): Promise<string> {
@@ -212,6 +212,18 @@ async function bootstrap() {
       return;
     }
     browserView.setBounds({ x: Math.round(x), y: Math.round(y), width: Math.round(width), height: Math.round(height) });
+  });
+
+  ipcMain.handle("browser:setVisible", async (_event, visible: boolean) => {
+    if (!browserView) return;
+    if (visible) {
+      // Restore bounds from last known sidebar width
+      browserView.setBounds(browserView._lastBounds ?? { x: 0, y: 0, width: 0, height: 0 });
+    } else {
+      // Save current bounds and hide
+      browserView._lastBounds = browserView.getBounds();
+      browserView.setBounds({ x: 0, y: 0, width: 0, height: 0 });
+    }
   });
 
   // Register browser control for the server to use (screenshot capture, picker, etc.)

@@ -671,10 +671,12 @@ document.querySelectorAll(".sidebar-tab").forEach(btn => {
 // ---------------------------------------------------------------------------
 function openSettings() {
   settingsModal.style.display = "flex";
+  if (isElectron && window.a2b.setVisible) window.a2b.setVisible(false);
 }
 
 function closeSettings() {
   settingsModal.style.display = "none";
+  if (isElectron && window.a2b.setVisible) window.a2b.setVisible(true);
 }
 
 // ---------------------------------------------------------------------------
