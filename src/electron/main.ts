@@ -80,6 +80,10 @@ function createBrowserView(): WebContentsView {
     }
   });
 
+  // Keep the embedded browser at 100% zoom so the rendered page size matches
+  // the view bounds exactly and doesn't overflow due to system text scaling.
+  view.setBackgroundColor("#f6f7f9");
+
   return view;
 }
 
@@ -104,10 +108,22 @@ async function injectPicker(enabled: boolean): Promise<void> {
 
 async function loadUrl(url: string): Promise<void> {
   if (!browserView) return;
-  if (!url.match(/^https?:\/\//)) {
+  // Allow data: and file: URLs for testing; otherwise default to https://
+  if (!url.match(/^(https?|file):\/\//) && !url.startsWith("data:")) {
     url = `https://${url}`;
   }
   await browserView.webContents.loadURL(url);
+  // Inject a CSS reset that removes default margins and hides the scrollbar
+  // so the page content fills the view exactly and the picker's right border
+  // is not clipped by the scrollbar width.
+  await browserView.webContents.insertCSS(`
+    html, body { margin: 0 !important; padding: 0 !important; }
+    ::-webkit-scrollbar { width: 0 !important; display: none !important; }
+    html { overflow-y: scroll !important; }
+  `).catch(() => {});
+  if (mainWindow) {
+    mainWindow.webContents.send("browser:navigated", browserView.webContents.getURL());
+  }
 }
 
 function getCurrentUrl(): string {
@@ -172,10 +188,30 @@ async function bootstrap() {
   ipcMain.handle("config:get", async () => loadConfig());
   ipcMain.handle("config:set", async (_event, config: AppConfig) => saveConfig(config));
 
-  // The frontend sends the exact bounds for the browser view (computed from panel layout)
-  ipcMain.handle("browser:setBounds", async (_event, bounds: { x: number; y: number; width: number; height: number }) => {
+  // The frontend sends the sidebar width, header height, toolbar height, and
+  // the renderer's innerWidth — all in the renderer's CSS-pixel space. We
+  // compute a single scale ratio from contentView.width / innerWidth and apply
+  // it uniformly to convert all measurements to DIP. This works across
+  // Windows (where innerWidth differs from DIP at high DPI), macOS (where
+  // innerWidth == DIP, ratio = 1), and Linux.
+  const INSET = 2;
+  ipcMain.handle("browser:setBounds", async (_event, payload: { sidebarWidth: number; headerHeight: number; toolbarHeight: number; innerWidth: number }) => {
     if (!mainWindow || !browserView) return;
-    browserView.setBounds(bounds);
+    const contentBounds = mainWindow.contentView.getBounds();
+    const scale = payload.innerWidth > 0 ? contentBounds.width / payload.innerWidth : 1;
+    const sidebarW = Math.round(payload.sidebarWidth * scale);
+    const headerH = Math.round(payload.headerHeight * scale);
+    const toolbarH = Math.round(payload.toolbarHeight * scale);
+    const topOffset = headerH + toolbarH;
+    const x = sidebarW + INSET;
+    const y = topOffset + INSET;
+    const width = contentBounds.width - sidebarW - INSET * 2;
+    const height = contentBounds.height - topOffset - INSET * 2;
+    if (width <= 0 || height <= 0) {
+      browserView.setBounds({ x: 0, y: 0, width: 0, height: 0 });
+      return;
+    }
+    browserView.setBounds({ x: Math.round(x), y: Math.round(y), width: Math.round(width), height: Math.round(height) });
   });
 
   // Register browser control for the server to use (screenshot capture, picker, etc.)
@@ -268,10 +304,30 @@ function createMainWindow(): void {
   });
 
   mainWindow.webContents.session.clearCache();
+  mainWindow.webContents.setZoomFactor(1);
   mainWindow.loadURL(`http://localhost:${serverPort}`);
 
   browserView = createBrowserView();
-  mainWindow.contentView.addChildView(browserView);
+  browserView.setBounds({ x: 0, y: 0, width: 0, height: 0 });
+
+  // Insert the browser view at index 0 so it sits BEHIND the main renderer's
+  // WebContentsView. This way the sidebar, toolbar, and DevTools (which live
+  // in the main renderer) draw on top of the browser view. We must NOT remove
+  // and re-add the main renderer's view, as that breaks its auto-resize
+  // binding to the content area.
+  mainWindow.contentView.addChildView(browserView, 0);
+
+  // Load a dummy home page so the browser view has content and its
+  // webContents dimensions are established before the user navigates.
+  const homePageUrl = `http://localhost:${serverPort}/home.html`;
+  browserView.webContents.loadURL(homePageUrl).then(() => {
+    browserView?.webContents.insertCSS(`
+      html, body { margin: 0 !important; padding: 0 !important; }
+      ::-webkit-scrollbar { width: 0 !important; display: none !important; }
+    `).catch(() => {});
+  }).catch(() => {
+    browserView?.webContents.loadURL("about:blank").catch(() => {});
+  });
 
   mainWindow.on("resize", () => {
     if (mainWindow) {

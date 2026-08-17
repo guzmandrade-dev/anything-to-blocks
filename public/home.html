@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Anything to Blocks — Home</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #f6f7f9;
+      color: #1f2328;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 40px;
+    }
+    .home-card {
+      max-width: 520px;
+      text-align: center;
+    }
+    .home-card h1 {
+      font-size: 1.75rem;
+      margin-bottom: 8px;
+    }
+    .home-card p {
+      color: #5a6270;
+      line-height: 1.6;
+      margin-bottom: 20px;
+    }
+    .shortcuts {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      text-align: left;
+      margin-top: 24px;
+    }
+    .shortcut {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 14px;
+      background: #fff;
+      border: 1px solid #d6dbe3;
+      border-radius: 6px;
+      font-size: 0.875rem;
+    }
+    .shortcut kbd {
+      background: #eef0f4;
+      border: 1px solid #d6dbe3;
+      border-radius: 4px;
+      padding: 2px 8px;
+      font-family: monospace;
+      font-size: 0.8rem;
+      color: #5a6270;
+    }
+    .shortcut span { color: #1f2328; }
+    .hint {
+      margin-top: 30px;
+      font-size: 0.8rem;
+      color: #8b92a1;
+    }
+  </style>
+</head>
+<body>
+  <div class="home-card">
+    <h1>Anything to Blocks</h1>
+    <p>Enter a URL in the address bar above to start browsing.<br>
+       Then use the element picker to select a region and convert it to Gutenberg blocks.</p>
+    <div class="shortcuts">
+      <div class="shortcut"><kbd>🎯 Pick Element</kbd><span>Click an element on any page to select it</span></div>
+      <div class="shortcut"><kbd>File → Settings</kbd><span>Configure your WordPress connection and ACP agent</span></div>
+      <div class="shortcut"><kbd>Ctrl+Shift+I</kbd><span>Toggle Developer Tools</span></div>
+    </div>
+    <p class="hint">This is the embedded browser home page. Your browsing history stays in this view.</p>
+  </div>
+</body>
+</html>

@@ -51,7 +51,17 @@ export function createServer(preferredPort?: number) {
   app.use(express.json({ limit: "200mb" }));
 
   const publicDir = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "public");
-  app.use(express.static(publicDir, { maxAge: 0, etag: false, lastModified: false }));
+  // Cache busting: append build timestamp to static assets
+  const BUILD_TIMESTAMP = Date.now().toString();
+  app.use((req, res, next) => {
+    if (req.path === "/index.html" || req.path === "/") {
+      res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate");
+      res.setHeader("Pragma", "no-cache");
+      res.setHeader("Expires", "0");
+    }
+    next();
+  });
+  app.use(express.static(publicDir, { maxAge: 0, etag: false, lastModified: true }));
 
   // ===== Session management =====
 

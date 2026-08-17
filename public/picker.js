@@ -40,6 +40,7 @@
       "border:2px solid #2f6ad1",
       "background:rgba(47,106,209,0.1)",
       "transition:all 0.05s ease",
+      "box-sizing:border-box",
       "display:none"
     ].join(";");
     document.body.appendChild(hoverOverlay);
@@ -69,11 +70,20 @@
     currentElement = el;
     const rect = el.getBoundingClientRect();
 
+    // Clamp the overlay so its border stays within the viewport. With
+    // box-sizing:border-box, the 2px border is drawn inside the width, but
+    // we still clamp to avoid any sub-pixel overflow at the edges.
+    const borderWidth = 2;
+    const left = Math.min(rect.left, window.innerWidth - borderWidth);
+    const top = Math.min(rect.top, window.innerHeight - borderWidth);
+    const width = Math.min(rect.width, window.innerWidth - left);
+    const height = Math.min(rect.height, window.innerHeight - top);
+
     hoverOverlay.style.display = "block";
-    hoverOverlay.style.left = rect.left + "px";
-    hoverOverlay.style.top = rect.top + "px";
-    hoverOverlay.style.width = rect.width + "px";
-    hoverOverlay.style.height = rect.height + "px";
+    hoverOverlay.style.left = left + "px";
+    hoverOverlay.style.top = top + "px";
+    hoverOverlay.style.width = width + "px";
+    hoverOverlay.style.height = height + "px";
 
     const tag = el.tagName.toLowerCase();
     const idPart = el.id ? "#" + el.id : "";

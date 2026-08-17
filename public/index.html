@@ -4,13 +4,13 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Anything to Blocks</title>
-  <link rel="stylesheet" href="style.css?v=1">
+  <link rel="stylesheet" href="style.css?v=3">
 </head>
 <body>
   <!-- ===== Title Bar ===== -->
   <header id="app-header">
     <div id="title-bar">
-      <button id="sidebar-toggle" class="btn btn-ghost btn-icon" title="Toggle WordPress sidebar">☰</button>
+      <button id="sidebar-toggle" class="btn btn-ghost btn-icon" title="Toggle sidebar">☰</button>
       <span id="project-title">Anything to Blocks</span>
       <span id="current-url" class="current-url"></span>
       <span id="status-text" class="status"></span>
@@ -84,48 +84,66 @@
 
   <!-- ===== Main Workspace ===== -->
   <div id="workspace">
-    <!-- WordPress Sidebar -->
-    <aside id="wp-sidebar">
-      <div id="wp-sidebar-resize-handle" title="Drag to resize"></div>
-      <div id="wp-sidebar-header">
-        <span class="panel-title">WordPress</span>
-        <button id="wp-refresh-btn" class="btn btn-small btn-ghost" title="Refresh">↻</button>
+    <!-- Left Sidebar with tabs: WordPress info + Regions -->
+    <aside id="sidebar">
+      <div id="sidebar-resize-handle" title="Drag to resize"></div>
+      <div id="sidebar-tabs">
+        <button class="sidebar-tab active" data-tab="wordpress" title="WordPress site info">WP</button>
+        <button class="sidebar-tab" data-tab="regions" title="Selected regions and conversations">
+          Regions <span id="region-count" class="badge"></span>
+        </button>
       </div>
-      <div id="wp-sidebar-content">
-        <div id="wp-not-configured" class="wp-empty">
-          <p>No WordPress site configured.</p>
-          <p class="hint">Open <strong>File → Settings</strong> to set up your WordPress connection.</p>
+      <div id="sidebar-header">
+        <span id="sidebar-title" class="panel-title">WordPress</span>
+        <button id="wp-refresh-btn" class="btn btn-small btn-ghost" title="Refresh" style="display:none;">↻</button>
+      </div>
+      <div id="sidebar-content">
+        <!-- WordPress tab -->
+        <div id="tab-wordpress" class="tab-panel active">
+          <div id="wp-not-configured" class="wp-empty">
+            <p>No WordPress site configured.</p>
+            <p class="hint">Open <strong>File → Settings</strong> to set up your WordPress connection.</p>
+          </div>
+          <div id="wp-info" style="display:none;">
+            <div class="wp-section" id="wp-site-section">
+              <div class="wp-section-title">Site</div>
+              <div id="wp-site-info"></div>
+            </div>
+            <div class="wp-section" id="wp-theme-section">
+              <div class="wp-section-title">Active Theme</div>
+              <div id="wp-theme-info"></div>
+            </div>
+            <div class="wp-section" id="wp-plugins-section">
+              <div class="wp-section-title">Plugins (<span id="wp-plugin-count">0</span>)</div>
+              <div id="wp-plugin-list"></div>
+            </div>
+            <div class="wp-section" id="wp-blocks-section">
+              <div class="wp-section-title">Block Types (<span id="wp-block-count">0</span>)</div>
+              <div id="wp-block-list"></div>
+            </div>
+            <div class="wp-section" id="wp-patterns-section">
+              <div class="wp-section-title">Patterns (<span id="wp-pattern-count">0</span>)</div>
+              <div id="wp-pattern-list"></div>
+            </div>
+            <div class="wp-section" id="wp-templates-section">
+              <div class="wp-section-title">Templates (<span id="wp-template-count">0</span>)</div>
+              <div id="wp-template-list"></div>
+            </div>
+          </div>
         </div>
-        <div id="wp-info" style="display:none;">
-          <div class="wp-section" id="wp-site-section">
-            <div class="wp-section-title">Site</div>
-            <div id="wp-site-info"></div>
-          </div>
-          <div class="wp-section" id="wp-theme-section">
-            <div class="wp-section-title">Active Theme</div>
-            <div id="wp-theme-info"></div>
-          </div>
-          <div class="wp-section" id="wp-plugins-section">
-            <div class="wp-section-title">Plugins (<span id="wp-plugin-count">0</span>)</div>
-            <div id="wp-plugin-list"></div>
-          </div>
-          <div class="wp-section" id="wp-blocks-section">
-            <div class="wp-section-title">Block Types (<span id="wp-block-count">0</span>)</div>
-            <div id="wp-block-list"></div>
-          </div>
-          <div class="wp-section" id="wp-patterns-section">
-            <div class="wp-section-title">Patterns (<span id="wp-pattern-count">0</span>)</div>
-            <div id="wp-pattern-list"></div>
-          </div>
-          <div class="wp-section" id="wp-templates-section">
-            <div class="wp-section-title">Templates (<span id="wp-template-count">0</span>)</div>
-            <div id="wp-template-list"></div>
+        <!-- Regions tab -->
+        <div id="tab-regions" class="tab-panel">
+          <div id="conversations-list">
+            <div id="no-regions" class="conversations-empty">
+              <p>No regions selected yet.</p>
+              <p class="hint">Browse a page and use <strong>🎯 Pick Element</strong> to select a DOM region. Each selected region gets its own conversation for block generation.</p>
+            </div>
           </div>
         </div>
       </div>
     </aside>
 
-    <!-- Browser Panel -->
+    <!-- Browser Panel — fills all remaining space -->
     <div id="browser-panel">
       <div id="browser-toolbar">
         <div class="toolbar-group">
@@ -140,31 +158,16 @@
           🎯 Pick Element
         </button>
       </div>
-      <div id="browser-container">
-        <!-- The WebContentsView is rendered behind this transparent area.
-             The frontend reports bounds to Electron so the native view is positioned correctly. -->
-        <div id="browser-placeholder">
-          <p>Enter a URL above to start browsing.</p>
-          <p class="hint">Once a page loads, use <strong>🎯 Pick Element</strong> to select a region.</p>
-        </div>
-      </div>
-    </div>
-
-    <!-- Region Conversations Panel -->
-    <div id="conversations-panel">
-      <div id="conversations-header">
-        <span class="panel-title">Regions</span>
-        <span id="region-count" class="hint"></span>
-      </div>
-      <div id="conversations-list">
-        <div id="no-regions" class="conversations-empty">
-          <p>No regions selected yet.</p>
-          <p class="hint">Browse a page and use <strong>🎯 Pick Element</strong> to select a DOM region. Each selected region gets its own conversation for block generation.</p>
-        </div>
+      <!-- The WebContentsView is a native overlay that fills this area.
+           Bounds are computed from window dimensions minus the sidebar width
+           and toolbar height, so we never need getBoundingClientRect(). -->
+      <div id="browser-placeholder">
+        <p>Enter a URL above to start browsing.</p>
+        <p class="hint">Once a page loads, use <strong>🎯 Pick Element</strong> to select a region.</p>
       </div>
     </div>
   </div>
 
-  <script src="app.js?v=1"></script>
+  <script src="app.js?v=3"></script>
 </body>
 </html>

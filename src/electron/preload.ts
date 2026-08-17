@@ -9,8 +9,8 @@ const api = {
   captureElement: (rect: { x: number; y: number; width: number; height: number }) =>
     ipcRenderer.invoke("browser:capture", rect),
   getUrl: () => ipcRenderer.invoke("browser:getUrl"),
-  setBounds: (bounds: { x: number; y: number; width: number; height: number }) =>
-    ipcRenderer.invoke("browser:setBounds", bounds),
+  setBounds: (sidebarWidth: number, headerHeight: number, toolbarHeight: number, innerWidth: number) =>
+    ipcRenderer.invoke("browser:setBounds", { sidebarWidth, headerHeight, toolbarHeight, innerWidth }),
   getConfig: () => ipcRenderer.invoke("config:get"),
   setConfig: (config: Record<string, unknown>) => ipcRenderer.invoke("config:set", config),
   onNavigated: (callback: (url: string) => void) => {

@@ -6,31 +6,29 @@
 let sessionId = null;
 let regions = new Map(); // regionId -> { data, messages, expanded, generating }
 let pickerActive = false;
-let browserViewReady = false;
 
 // --- DOM shortcuts ---
 const $ = (id) => document.getElementById(id);
 const statusText = $("status-text");
-const workspace = $("workspace");
 const urlInput = $("url-input");
 const urlGoBtn = $("url-go");
 const browserBack = $("browser-back");
 const browserForward = $("browser-forward");
 const browserReload = $("browser-reload");
 const pickerToggle = $("picker-toggle");
-const browserContainer = $("browser-container");
 const browserPlaceholder = $("browser-placeholder");
 const currentUrlLabel = $("current-url");
 const conversationsList = $("conversations-list");
 const noRegions = $("no-regions");
 const regionCount = $("region-count");
-const wpSidebar = $("wp-sidebar");
+const sidebar = $("sidebar");
 const sidebarToggle = $("sidebar-toggle");
+const sidebarTitle = $("sidebar-title");
 const wpRefreshBtn = $("wp-refresh-btn");
 const wpNotConfigured = $("wp-not-configured");
 const wpInfo = $("wp-info");
-const wpSidebarResizeHandle = $("wp-sidebar-resize-handle");
-const conversationsPanel = $("conversations-panel");
+const sidebarResizeHandle = $("sidebar-resize-handle");
+const browserPanel = $("browser-panel");
 
 // Settings modal
 const settingsModal = $("settings-modal");
@@ -71,7 +69,6 @@ async function loadAppConfig() {
   if (isElectron && window.a2b.getConfig) {
     appConfig = await window.a2b.getConfig();
   }
-  // Populate settings form
   settingsMigrationMode.value = appConfig.agent?.migrationMode ?? "structure";
   settingsCommand.value = appConfig.agent?.command ?? "opencode";
   settingsArgs.value = appConfig.agent?.args ?? "acp";
@@ -104,7 +101,6 @@ async function saveAppConfig() {
   }
   appConfig = config;
   closeSettings();
-  // Refresh WordPress info if site URL is set
   if (config.wordpress.siteUrl) {
     await fetchWordPressInfo();
   } else {
@@ -140,7 +136,7 @@ async function createSession() {
 // ---------------------------------------------------------------------------
 async function navigateToUrl(url) {
   if (!url) return;
-  if (!url.match(/^https?:\/\//)) {
+  if (!url.match(/^(https?|file):\/\//) && !url.startsWith("data:")) {
     url = `https://${url}`;
   }
   urlInput.value = url;
@@ -159,8 +155,8 @@ async function navigateToUrl(url) {
       if (!res.ok) throw new Error("Failed to load URL");
     }
     currentUrlLabel.textContent = url;
-    updateBrowserBounds();
     clearStatus();
+    updateBrowserBounds();
   } catch (err) {
     setStatus(`Error: ${err.message}`, "error");
     browserPlaceholder.classList.remove("hidden");
@@ -168,21 +164,15 @@ async function navigateToUrl(url) {
 }
 
 async function goBack() {
-  if (isElectron && window.a2b.goBack) {
-    await window.a2b.goBack();
-  }
+  if (isElectron && window.a2b.goBack) await window.a2b.goBack();
 }
 
 async function goForward() {
-  if (isElectron && window.a2b.goForward) {
-    await window.a2b.goForward();
-  }
+  if (isElectron && window.a2b.goForward) await window.a2b.goForward();
 }
 
 async function reloadPage() {
-  if (isElectron && window.a2b.reload) {
-    await window.a2b.reload();
-  }
+  if (isElectron && window.a2b.reload) await window.a2b.reload();
 }
 
 // ---------------------------------------------------------------------------
@@ -217,39 +207,45 @@ async function togglePicker() {
 }
 
 // ---------------------------------------------------------------------------
-// Browser view bounds management
+// Browser view bounds — the frontend sends only the sidebar width to the
+// main process, which computes the actual bounds from contentView size.
+// This avoids unreliable window.innerWidth on Windows with high DPI.
 // ---------------------------------------------------------------------------
+
+const SIDEBAR_MIN = 280;
+const SIDEBAR_MAX = 600;
+
+function getSidebarWidth() {
+  if (sidebar.classList.contains("collapsed")) return 0;
+  const w = parseInt(sidebar.style.width || "0", 10);
+  if (w > 0) return Math.min(Math.max(w, SIDEBAR_MIN), SIDEBAR_MAX);
+  const cssW = getComputedStyle(document.documentElement).getPropertyValue("--sidebar-w").trim();
+  return parseInt(cssW || "380", 10);
+}
+
 function updateBrowserBounds() {
   if (!isElectron || !window.a2b.setBounds) return;
-
-  const rect = browserContainer.getBoundingClientRect();
-  const dpr = window.devicePixelRatio || 1;
-
-  window.a2b.setBounds({
-    x: Math.round(rect.left * dpr),
-    y: Math.round(rect.top * dpr),
-    width: Math.round(rect.width * dpr),
-    height: Math.round(rect.height * dpr),
-  });
+  // Send all measurements in CSS px from the renderer. The main process
+  // scales them to DIP using the ratio contentView.width / innerWidth.
+  const headerH = parseInt(getComputedStyle(document.documentElement).getPropertyValue("--header-h").trim(), 10) || 44;
+  const toolbarH = parseInt(getComputedStyle(document.documentElement).getPropertyValue("--toolbar-h").trim(), 10) || 42;
+  window.a2b.setBounds(getSidebarWidth(), headerH, toolbarH, window.innerWidth);
 }
 
 // ---------------------------------------------------------------------------
 // Region management
 // ---------------------------------------------------------------------------
 async function handleElementSelected(data) {
-  // Capture screenshot of the element
   let screenshot = null;
   if (isElectron && window.a2b.captureElement && data.boundingRect) {
-    const dpr = window.devicePixelRatio || 1;
     screenshot = await window.a2b.captureElement({
-      x: data.boundingRect.x * dpr,
-      y: data.boundingRect.y * dpr,
-      width: data.boundingRect.width * dpr,
-      height: data.boundingRect.height * dpr,
+      x: data.boundingRect.x,
+      y: data.boundingRect.y,
+      width: data.boundingRect.width,
+      height: data.boundingRect.height,
     });
   }
 
-  // Create region via server
   const regionData = {
     tagName: data.tagName,
     classes: data.classes || [],
@@ -274,13 +270,14 @@ async function handleElementSelected(data) {
     }
     const result = await res.json();
     addRegionCard(result.regionId, regionData);
+    // Switch to Regions tab so the user sees the new region
+    switchTab("regions");
     setStatus(`Region selected: ${data.tagName}`, "success");
     setTimeout(clearStatus, 2000);
   } catch (err) {
     setStatus(`Error: ${err.message}`, "error");
   }
 
-  // Turn off picker after selection
   if (pickerActive) {
     pickerActive = false;
     pickerToggle.classList.remove("active");
@@ -333,7 +330,6 @@ function addRegionCard(regionId, data) {
 
   conversationsList.appendChild(card);
 
-  // Wire up events
   const header = card.querySelector(".region-card-header");
   header.addEventListener("click", (e) => {
     if (e.target.closest(".region-delete-btn")) return;
@@ -351,7 +347,6 @@ function addRegionCard(regionId, data) {
     generateBlock(regionId, customPrompt);
   });
 
-  // Enter to send in textarea
   const textarea = card.querySelector(".region-input-area textarea");
   textarea.addEventListener("keydown", (e) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -364,7 +359,6 @@ function addRegionCard(regionId, data) {
     }
   });
 
-  // Copy block markup
   card.querySelector(".block-copy-btn").addEventListener("click", () => {
     const pre = card.querySelector(".block-output pre");
     navigator.clipboard.writeText(pre.textContent).then(() => {
@@ -388,7 +382,8 @@ function deleteRegion(regionId) {
 }
 
 function updateRegionCount() {
-  regionCount.textContent = regions.size > 0 ? `(${regions.size})` : "";
+  const count = regions.size;
+  regionCount.textContent = count > 0 ? count : "";
 }
 
 // ---------------------------------------------------------------------------
@@ -469,7 +464,6 @@ async function generateBlock(regionId, customPrompt) {
       blockMarkup = text;
     });
 
-    // Show block output
     if (blockMarkup) {
       const outputEl = card.querySelector(".block-output");
       const pre = outputEl.querySelector("pre");
@@ -516,7 +510,6 @@ async function readSSEStream(res, assistantEl, onComplete) {
           if (event.type === "thinking") {
             assistantEl.innerHTML = `<span style="color:var(--text-muted)">Thinking…</span>`;
           } else if (event.type === "tool_event") {
-            // Subtle tool event display
             const toolEl = document.createElement("div");
             toolEl.className = "message tool-event";
             toolEl.textContent = `🔧 ${event.tool || "tool"}`;
@@ -590,7 +583,6 @@ function renderWordPressInfo(info) {
   wpNotConfigured.style.display = "none";
   wpInfo.style.display = "block";
 
-  // Site info
   const siteEl = $("wp-site-info");
   siteEl.innerHTML = `
     <div class="wp-info-row"><span class="wp-info-label">URL:</span> <span class="wp-info-value">${escapeHtml(info.siteUrl || "")}</span></div>
@@ -598,7 +590,6 @@ function renderWordPressInfo(info) {
     <div class="wp-info-row"><span class="wp-info-label">Description:</span> <span class="wp-info-value">${escapeHtml(info.siteDescription || "—")}</span></div>
   `;
 
-  // Theme
   const themeEl = $("wp-theme-info");
   if (info.theme) {
     themeEl.innerHTML = `
@@ -610,7 +601,6 @@ function renderWordPressInfo(info) {
     themeEl.innerHTML = `<div class="wp-item-meta">No active theme found</div>`;
   }
 
-  // Plugins
   const pluginList = $("wp-plugin-list");
   const plugins = info.plugins || [];
   $("wp-plugin-count").textContent = plugins.length;
@@ -621,7 +611,6 @@ function renderWordPressInfo(info) {
     </div>
   `).join("");
 
-  // Block types
   const blockList = $("wp-block-list");
   const blocks = info.blockTypes || [];
   $("wp-block-count").textContent = blocks.length;
@@ -632,7 +621,6 @@ function renderWordPressInfo(info) {
     </div>
   `).join("") + (blocks.length > 50 ? `<div class="wp-item-meta">…and ${blocks.length - 50} more</div>` : "");
 
-  // Patterns
   const patternList = $("wp-pattern-list");
   const patterns = info.patterns || [];
   $("wp-pattern-count").textContent = patterns.length;
@@ -643,7 +631,6 @@ function renderWordPressInfo(info) {
     </div>
   `).join("") + (patterns.length > 30 ? `<div class="wp-item-meta">…and ${patterns.length - 30} more</div>` : "");
 
-  // Templates
   const templateList = $("wp-template-list");
   const templates = info.templates || [];
   $("wp-template-count").textContent = templates.length;
@@ -654,6 +641,30 @@ function renderWordPressInfo(info) {
     </div>
   `).join("");
 }
+
+// ---------------------------------------------------------------------------
+// Sidebar tabs
+// ---------------------------------------------------------------------------
+function switchTab(tabName) {
+  document.querySelectorAll(".sidebar-tab").forEach(btn => {
+    btn.classList.toggle("active", btn.dataset.tab === tabName);
+  });
+  document.querySelectorAll(".tab-panel").forEach(panel => {
+    panel.classList.toggle("active", panel.id === `tab-${tabName}`);
+  });
+  if (tabName === "wordpress") {
+    sidebarTitle.textContent = "WordPress";
+    wpRefreshBtn.style.display = "";
+  } else {
+    sidebarTitle.textContent = "Regions";
+    wpRefreshBtn.style.display = "none";
+  }
+  // No bounds update needed — browser view is separate from sidebar tabs
+}
+
+document.querySelectorAll(".sidebar-tab").forEach(btn => {
+  btn.addEventListener("click", () => switchTab(btn.dataset.tab));
+});
 
 // ---------------------------------------------------------------------------
 // Settings modal
@@ -670,25 +681,25 @@ function closeSettings() {
 // Sidebar toggle & resize
 // ---------------------------------------------------------------------------
 function toggleSidebar() {
-  wpSidebar.classList.toggle("collapsed");
+  sidebar.classList.toggle("collapsed");
   updateBrowserBounds();
 }
 
-// Sidebar resize (drag)
 let sidebarDragging = false;
 
-wpSidebarResizeHandle.addEventListener("mousedown", (e) => {
+sidebarResizeHandle.addEventListener("mousedown", (e) => {
   sidebarDragging = true;
-  wpSidebar.classList.add("resizing");
+  sidebar.classList.add("resizing");
   e.preventDefault();
 });
 
 document.addEventListener("mousemove", (e) => {
   if (sidebarDragging) {
-    const rect = wpSidebar.getBoundingClientRect();
+    const rect = sidebar.getBoundingClientRect();
     const newWidth = e.clientX - rect.left;
-    if (newWidth >= 200 && newWidth <= 500) {
-      wpSidebar.style.width = `${newWidth}px`;
+    if (newWidth >= SIDEBAR_MIN && newWidth <= SIDEBAR_MAX) {
+      sidebar.style.width = `${newWidth}px`;
+      document.documentElement.style.setProperty("--sidebar-w", `${newWidth}px`);
     }
     updateBrowserBounds();
   }
@@ -697,7 +708,7 @@ document.addEventListener("mousemove", (e) => {
 document.addEventListener("mouseup", () => {
   if (sidebarDragging) {
     sidebarDragging = false;
-    wpSidebar.classList.remove("resizing");
+    sidebar.classList.remove("resizing");
     updateBrowserBounds();
   }
 });
@@ -746,15 +757,11 @@ if (isElectron) {
   }
 
   if (window.a2b.onBrowserResize) {
-    window.a2b.onBrowserResize(() => {
-      updateBrowserBounds();
-    });
+    window.a2b.onBrowserResize(() => updateBrowserBounds());
   }
 
   if (window.a2b.onElementSelected) {
-    window.a2b.onElementSelected((data) => {
-      handleElementSelected(data);
-    });
+    window.a2b.onElementSelected((data) => handleElementSelected(data));
   }
 
   if (window.a2b.onPickerEnabled) {
@@ -779,9 +786,7 @@ if (isElectron) {
 }
 
 // Window resize → update browser bounds
-window.addEventListener("resize", () => {
-  updateBrowserBounds();
-});
+window.addEventListener("resize", () => updateBrowserBounds());
 
 // ---------------------------------------------------------------------------
 // Init
@@ -794,6 +799,10 @@ window.addEventListener("resize", () => {
   } else {
     showWpNotConfigured();
   }
-  // Initial bounds after layout settles
-  setTimeout(updateBrowserBounds, 100);
+  // The browser view already has the home page loaded by the main process.
+  // Hide the placeholder and set initial bounds.
+  browserPlaceholder.classList.add("hidden");
+  requestAnimationFrame(() => updateBrowserBounds());
+  setTimeout(() => updateBrowserBounds(), 100);
+  setTimeout(() => updateBrowserBounds(), 500);
 })();

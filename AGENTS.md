@@ -82,6 +82,12 @@ Electron App
    `app.getPath("userData")`, loaded/saved via `config:get`/`config:set` IPC.
 5. **Preload CJS shim** — `scripts/copy-preload.mjs` converts the ESM
    `preload.js` output to `preload.cjs` for Electron's CommonJS require.
+6. **Browser view is hidden until bounds are set** — `main.ts` creates the
+   `WebContentsView` with zero-size bounds. The frontend reports the container's
+   screen-space rectangle via `browser:setBounds` after layout settles
+   (`ResizeObserver` + deferred updates). This keeps the native browser view
+   clipped to the center panel and prevents it from rendering over the sidebar or
+   regions panel.
 
 ## Development
 
