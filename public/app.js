@@ -147,7 +147,7 @@ async function navigateToUrl(url) {
     if (isElectron && window.a2b.loadUrl) {
       await window.a2b.loadUrl(url);
     } else {
-      const res = await fetch("/api/browser/load", {
+      const res = await fetch(`/api/session/${sessionId}/browser/load`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ url }),
@@ -186,7 +186,7 @@ async function togglePicker() {
   if (isElectron && window.a2b.togglePicker) {
     await window.a2b.togglePicker(pickerActive);
   } else {
-    const res = await fetch("/api/browser/picker", {
+    const res = await fetch(`/api/session/${sessionId}/browser/picker`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ enabled: pickerActive }),
@@ -259,7 +259,7 @@ async function handleElementSelected(data) {
   };
 
   try {
-    const res = await fetch("/api/region", {
+    const res = await fetch(`/api/session/${sessionId}/region`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(regionData),
@@ -374,7 +374,7 @@ function deleteRegion(regionId) {
   regions.delete(regionId);
   const card = $(`region-${regionId}`);
   if (card) card.remove();
-  fetch(`/api/region/${regionId}`, { method: "DELETE" }).catch(() => {});
+  fetch(`/api/session/${sessionId}/region/${regionId}`, { method: "DELETE" }).catch(() => {});
   if (regions.size === 0 && noRegions) {
     noRegions.style.display = "block";
   }
@@ -401,7 +401,7 @@ async function sendRegionChat(regionId, message) {
   assistantEl.textContent = "Thinking…";
 
   try {
-    const res = await fetch(`/api/region/${regionId}/chat`, {
+    const res = await fetch(`/api/session/${sessionId}/region/${regionId}/chat`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ message }),
@@ -448,7 +448,7 @@ async function generateBlock(regionId, customPrompt) {
   generateBtn.innerHTML = '<span class="btn-spinner"></span>Generating…';
 
   try {
-    const res = await fetch(`/api/region/${regionId}/generate`, {
+    const res = await fetch(`/api/session/${sessionId}/region/${regionId}/generate`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ regionId, customPrompt }),
@@ -560,7 +560,7 @@ async function fetchWordPressInfo() {
   setStatus("Fetching WordPress info…");
 
   try {
-    const res = await fetch("/api/wordpress/info");
+    const res = await fetch(`/api/session/${sessionId}/wordpress/info`);
     if (!res.ok) {
       const err = await res.json();
       throw new Error(err.error || "Failed to fetch WordPress info");
