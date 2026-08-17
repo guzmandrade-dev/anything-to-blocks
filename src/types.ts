@@ -39,6 +39,8 @@ export interface ConversationMessage {
 
 export interface WordPressSiteInfo {
   siteUrl: string;
+  siteName: string;
+  siteDescription: string;
   theme: WordPressTheme | null;
   plugins: WordPressPlugin[];
   blockTypes: WordPressBlockType[];

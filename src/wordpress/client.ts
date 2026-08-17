@@ -55,7 +55,8 @@ export class WordPressClient {
 
     const siteUrl = this.config.siteUrl.replace(/\/$/, "");
 
-    const [themes, plugins, blockTypes, blockPatterns, templates, templateParts] = await Promise.all([
+    const [root, themes, plugins, blockTypes, blockPatterns, templates, templateParts] = await Promise.all([
+      this.fetchJson<{ name: string; description: string }>("/"),
       this.fetchJson<WordPressTheme[]>("/wp/v2/themes"),
       this.fetchJson<WordPressPlugin[]>("/wp/v2/plugins"),
       this.fetchJson<WordPressBlockType[]>("/wp/v2/block-types"),
@@ -68,6 +69,8 @@ export class WordPressClient {
 
     const info: WordPressSiteInfo = {
       siteUrl,
+      siteName: root?.name ?? "",
+      siteDescription: root?.description ?? "",
       theme: activeTheme ?? null,
       plugins: plugins ?? [],
       blockTypes: blockTypes ?? [],

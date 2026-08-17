@@ -565,8 +565,13 @@ async function fetchWordPressInfo() {
       const err = await res.json();
       throw new Error(err.error || "Failed to fetch WordPress info");
     }
-    const info = await res.json();
-    renderWordPressInfo(info);
+    const data = await res.json();
+    if (!data.connected) {
+      showWpNotConfigured();
+      clearStatus();
+      return;
+    }
+    renderWordPressInfo(data.info);
     clearStatus();
   } catch (err) {
     setStatus(`WordPress: ${err.message}`, "error");
@@ -622,7 +627,7 @@ function renderWordPressInfo(info) {
   `).join("") + (blocks.length > 50 ? `<div class="wp-item-meta">…and ${blocks.length - 50} more</div>` : "");
 
   const patternList = $("wp-pattern-list");
-  const patterns = info.patterns || [];
+  const patterns = info.blockPatterns || [];
   $("wp-pattern-count").textContent = patterns.length;
   patternList.innerHTML = patterns.slice(0, 30).map(p => `
     <div class="wp-item">
