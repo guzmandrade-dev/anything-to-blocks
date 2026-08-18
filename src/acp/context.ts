@@ -123,10 +123,24 @@ function buildWordPressInfoText(info: WordPressSiteInfo): string {
   }
 
   if (info.blockTypes.length > 0) {
+    parts.push(`Available block types (use ONLY these names/attributes):`);
     const blocks = info.blockTypes
-      .map((b) => `  - ${b.name}: ${b.title} (${b.category})`)
+      .map((b) => {
+        const attrs = Object.entries(b.attributes || {})
+          .map(([k, v]) => {
+            const type = typeof v === "object" && v && "type" in v ? String(v.type) : "string";
+            const defaultVal = typeof v === "object" && v && "default" in v ? ` default:${JSON.stringify(v.default)}` : "";
+            return `${k}(${type}${defaultVal})`;
+          })
+          .join(", ");
+        const supports = Object.entries(b.supports || {})
+          .filter(([, v]) => v === true)
+          .map(([k]) => k)
+          .join(", ");
+        return `  - ${b.name}: ${b.title} [cat:${b.category}] attrs:{${attrs || "none"}} supports:{${supports || "none"}}`;
+      })
       .join("\n");
-    parts.push(`Registered block types:\n${blocks}`);
+    parts.push(blocks);
   }
 
   if (info.blockPatterns.length > 0) {

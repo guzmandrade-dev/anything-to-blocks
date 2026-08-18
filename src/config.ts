@@ -13,6 +13,23 @@ import { z } from "zod";
  */
 export const migrationModeSchema = z.enum(["structure", "visual"]).default("structure");
 
+const VALIDATION_STEPS =
+  "Before finalizing, validate your output:\n" +
+  "1. Verify every block name in the markup exists in the available block types list.\n" +
+  "2. Verify each block attribute matches a declared attribute type/default.\n" +
+  "3. Verify inner blocks are valid children (e.g., only allowed blocks inside columns/group).\n" +
+  "4. Prefer standard delimiter comments: `<!-- wp:block-name {JSON attrs} --> ... <!-- /wp:block-name -->`.\n" +
+  "5. Do not invent blocks, attributes, or supports flags not listed below.\n";
+
+const BLOCK_REFERENCE =
+  "Reference examples of valid core block markup (use these as templates):\n" +
+  "- Group row: `<!-- wp:group {\"layout\":{\"type\":\"flex\",\"flexWrap\":\"nowrap\"}} --><div class=\"wp-block-group\">...\u003c/div><!-- /wp:group -->`\n" +
+  "- Group stack: `<!-- wp:group {\"layout\":{\"type\":\"constrained\"}} --><div class=\"wp-block-group\">...\u003c/div><!-- /wp:group -->`\n" +
+  "- Columns: `<!-- wp:columns --><div class=\"wp-block-columns\"><!-- wp:column {\"width\":\"50%\"} --><div class=\"wp-block-column\" style=\"flex-basis:50%\"\u003e...\u003c/div><!-- /wp:column --></div><!-- /wp:columns -->`\n" +
+  "- Image: `<!-- wp:image {\"width\":\"250px\",\"height\":\"250px\"} --><figure class=\"wp-block-image is-resized\" style=\"width:250px;height:250px\"><img ... /></figure><!-- /wp:image -->`\n" +
+  "- Heading: `<!-- wp:heading {\"level\":3} --><h3 class=\"wp-block-heading\">...\u003c/h3><!-- /wp:heading -->`\n" +
+  "- Paragraph: `<!-- wp:paragraph --><p>...\u003c/p><!-- /wp:paragraph -->`\n";
+
 const STRUCTURE_PROMPT =
   "You are an expert in WordPress Gutenberg blocks. " +
   "Your task is to migrate content from a source website into the target WordPress site.\n\n" +
@@ -33,7 +50,10 @@ const STRUCTURE_PROMPT =
   "about the WordPress site (available blocks, patterns, templates, theme), generate " +
   "the corresponding Gutenberg block markup.\n" +
   "- Return only the block markup (HTML with block delimiters). " +
-  "Do not include explanations unless asked.";
+  "Do not include explanations unless asked.\n\n" +
+  VALIDATION_STEPS +
+  "\n" +
+  BLOCK_REFERENCE;
 
 const VISUAL_PROMPT =
   "You are an expert in WordPress Gutenberg blocks. " +
@@ -51,7 +71,10 @@ const VISUAL_PROMPT =
   "and information about the WordPress site, generate the corresponding Gutenberg " +
   "block markup.\n" +
   "- Return only the block markup (HTML with block delimiters). " +
-  "Do not include explanations unless asked.";
+  "Do not include explanations unless asked.\n\n" +
+  VALIDATION_STEPS +
+  "\n" +
+  BLOCK_REFERENCE;
 
 export function getDefaultPrompt(mode: "structure" | "visual"): string {
   return mode === "visual" ? VISUAL_PROMPT : STRUCTURE_PROMPT;

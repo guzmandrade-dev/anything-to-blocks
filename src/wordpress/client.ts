@@ -79,7 +79,7 @@ export class WordPressClient {
       this.fetchJson<{ name: string; description: string }>("/"),
       this.fetchJson<WordPressTheme[]>("/wp/v2/themes"),
       this.fetchJson<WordPressPlugin[]>("/wp/v2/plugins"),
-      this.fetchJson<WordPressBlockType[]>("/wp/v2/block-types"),
+      this.fetchJson<WordPressBlockType[]>("/wp/v2/block-types?context=edit"),
       this.fetchJson<WordPressBlockPattern[]>("/wp/v2/block-patterns"),
       this.fetchJson<WordPressTemplate[]>("/wp/v2/templates"),
       this.fetchJson<WordPressTemplatePart[]>("/wp/v2/template-parts")

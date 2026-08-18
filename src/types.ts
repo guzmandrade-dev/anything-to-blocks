@@ -63,12 +63,20 @@ export interface WordPressPlugin {
   status: string;
 }
 
+export interface WordPressBlockAttribute {
+  type: "string" | "number" | "boolean" | "array" | "object" | unknown;
+  default?: unknown;
+  enum?: unknown[];
+}
+
 export interface WordPressBlockType {
   name: string;
   title: string;
   category: string;
   icon: string;
   description: string;
+  attributes: Record<string, WordPressBlockAttribute>;
+  supports: Record<string, unknown>;
 }
 
 export interface WordPressBlockPattern {
