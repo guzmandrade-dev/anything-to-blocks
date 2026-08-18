@@ -142,33 +142,3 @@ function a2b_rest_get_block_patterns( WP_REST_Request $request ): WP_REST_Respon
 	return new WP_REST_Response( $result, 200 );
 }
 
-/**
- * REST callback: return all registered block templates and template parts.
- *
- * @param WP_REST_Request $request The REST request.
- * @return WP_REST_Response
- */
-function a2b_rest_get_templates( WP_REST_Request $request ): WP_REST_Response {
-	$filter_type = $request->get_param( 'type' ) ?? '';
-	$result      = array();
-
-	$types = $filter_type ? array( $filter_type ) : array( 'wp_template', 'wp_template_part' );
-
-	foreach ( $types as $type ) {
-		$templates = get_block_templates( array(), $type );
-		foreach ( $templates as $template ) {
-			$result[] = array(
-				'id'          => $template->slug ?? '',
-				'slug'        => $template->slug ?? '',
-				'theme'       => $template->theme ?? '',
-				'type'        => $type,
-				'area'        => $template->area ?? '',
-				'title'       => $template->title ?? '',
-				'description' => $template->description ?? '',
-				'content'     => is_string( $template->content ) ? $template->content : '',
-			);
-		}
-	}
-
-	return new WP_REST_Response( $result, 200 );
-}
