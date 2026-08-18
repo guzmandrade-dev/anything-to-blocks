@@ -30,13 +30,8 @@ export class AcpClient {
 
   async start(): Promise<void> {
     if (this.process) return;
-    const { command, args, env, model } = this.options.agent;
-    const agentEnv = { ...env };
-    if (model) {
-      // Pass model to agents via env var — opencode uses OPENCODE_MODEL
-      agentEnv["OPENCODE_MODEL"] = model;
-    }
-    this.process = spawnAgentProcess(command, args, agentEnv);
+    const { command, args, env } = this.options.agent;
+    this.process = spawnAgentProcess(command, args, env);
     this.connection = this.app.connect(this.process.stream);
 
     this.connection.closed.catch((err) => {
