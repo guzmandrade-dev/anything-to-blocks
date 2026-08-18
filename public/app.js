@@ -61,6 +61,34 @@ function clearStatus() {
 }
 
 // ---------------------------------------------------------------------------
+// Logging
+// ---------------------------------------------------------------------------
+const logEntries = $("log-entries");
+const logCount = $("log-count");
+const logClearBtn = $("log-clear-btn");
+let logTotal = 0;
+
+function log(msg, level = "info") {
+  const time = new Date().toLocaleTimeString();
+  const entry = document.createElement("div");
+  entry.className = `log-entry ${level}`;
+  entry.innerHTML = `<span class="log-time">${time}</span><span class="log-level">${level}</span><span class="log-msg"></span>`;
+  entry.querySelector(".log-msg").textContent = msg;
+  logEntries.appendChild(entry);
+  logTotal++;
+  logCount.textContent = logTotal > 99 ? "99+" : String(logTotal);
+  // Auto-scroll to bottom
+  logEntries.scrollTop = logEntries.scrollHeight;
+}
+
+logClearBtn.addEventListener("click", () => {
+  logEntries.innerHTML = "";
+  logTotal = 0;
+  logCount.textContent = "";
+  log("Log cleared", "info");
+});
+
+// ---------------------------------------------------------------------------
 // Config
 // ---------------------------------------------------------------------------
 let appConfig = { agent: {}, wordpress: {} };
@@ -69,6 +97,8 @@ async function loadAppConfig() {
   if (isElectron && window.a2b.getConfig) {
     appConfig = await window.a2b.getConfig();
   }
+  if (!appConfig.agent) appConfig.agent = {};
+  if (!appConfig.wordpress) appConfig.wordpress = {};
   settingsMigrationMode.value = appConfig.agent?.migrationMode ?? "structure";
   settingsCommand.value = appConfig.agent?.command ?? "opencode";
   settingsArgs.value = appConfig.agent?.args ?? "acp";
@@ -101,6 +131,7 @@ async function saveAppConfig() {
   }
   appConfig = config;
   closeSettings();
+  log(`Settings saved (WP URL: ${config.wordpress.siteUrl || "none"})`, "info");
   if (config.wordpress.siteUrl) {
     await fetchWordPressInfo();
   } else {
@@ -113,10 +144,11 @@ async function saveAppConfig() {
 // ---------------------------------------------------------------------------
 async function createSession() {
   try {
+    log(`Creating session (agent: ${appConfig.agent?.command ?? "opencode"}, WP: ${appConfig.wordpress?.siteUrl || "not configured"})`, "info");
     const res = await fetch("/api/session", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({}),
+      body: JSON.stringify(appConfig),
     });
     if (!res.ok) {
       const err = await res.json();
@@ -124,9 +156,11 @@ async function createSession() {
     }
     const data = await res.json();
     sessionId = data.sessionId;
+    log(`Session created: ${sessionId}`, "success");
     setStatus("Session created", "success");
     setTimeout(clearStatus, 2000);
   } catch (err) {
+    log(`Session error: ${err.message}`, "error");
     setStatus(`Error: ${err.message}`, "error");
   }
 }
@@ -141,6 +175,7 @@ async function navigateToUrl(url) {
   }
   urlInput.value = url;
   browserPlaceholder.classList.add("hidden");
+  log(`Navigating to ${url}`, "info");
   setStatus("Loading…");
 
   try {
@@ -158,6 +193,7 @@ async function navigateToUrl(url) {
     clearStatus();
     updateBrowserBounds();
   } catch (err) {
+    log(`Navigation error: ${err.message}`, "error");
     setStatus(`Error: ${err.message}`, "error");
     browserPlaceholder.classList.remove("hidden");
   }
@@ -272,9 +308,11 @@ async function handleElementSelected(data) {
     addRegionCard(result.regionId, regionData);
     // Switch to Regions tab so the user sees the new region
     switchTab("regions");
+    log(`Region selected: <${data.tagName}> (id: ${result.regionId.slice(0, 8)})`, "success");
     setStatus(`Region selected: ${data.tagName}`, "success");
     setTimeout(clearStatus, 2000);
   } catch (err) {
+    log(`Region error: ${err.message}`, "error");
     setStatus(`Error: ${err.message}`, "error");
   }
 
@@ -553,10 +591,12 @@ function addRegionMessage(messagesEl, role, text) {
 // ---------------------------------------------------------------------------
 async function fetchWordPressInfo() {
   if (!appConfig.wordpress?.siteUrl) {
+    log("WordPress site URL not configured", "warn");
     showWpNotConfigured();
     return;
   }
 
+  log(`Fetching WordPress info from ${appConfig.wordpress.siteUrl}…`, "info");
   setStatus("Fetching WordPress info…");
 
   try {
@@ -567,13 +607,17 @@ async function fetchWordPressInfo() {
     }
     const data = await res.json();
     if (!data.connected) {
+      log("WordPress not connected (siteUrl empty on server)", "warn");
       showWpNotConfigured();
       clearStatus();
       return;
     }
-    renderWordPressInfo(data.info);
+    const info = data.info;
+    log(`WP info received: theme=${info.theme?.name ?? "none"}, plugins=${info.plugins?.length ?? 0}, blocks=${info.blockTypes?.length ?? 0}, patterns=${info.blockPatterns?.length ?? 0}`, "success");
+    renderWordPressInfo(info);
     clearStatus();
   } catch (err) {
+    log(`WordPress fetch error: ${err.message}`, "error");
     setStatus(`WordPress: ${err.message}`, "error");
     showWpNotConfigured();
   }
@@ -660,6 +704,9 @@ function switchTab(tabName) {
   if (tabName === "wordpress") {
     sidebarTitle.textContent = "WordPress";
     wpRefreshBtn.style.display = "";
+  } else if (tabName === "logs") {
+    sidebarTitle.textContent = "Event Log";
+    wpRefreshBtn.style.display = "none";
   } else {
     sidebarTitle.textContent = "Regions";
     wpRefreshBtn.style.display = "none";
@@ -799,11 +846,14 @@ window.addEventListener("resize", () => updateBrowserBounds());
 // Init
 // ---------------------------------------------------------------------------
 (async function init() {
+  log("App starting…", "info");
   await loadAppConfig();
+  log(`Config loaded (Electron: ${isElectron}, WP URL: ${appConfig.wordpress?.siteUrl || "none"})`, "info");
   await createSession();
   if (appConfig.wordpress?.siteUrl) {
     await fetchWordPressInfo();
   } else {
+    log("WordPress not configured — open Settings to set up", "warn");
     showWpNotConfigured();
   }
   // The browser view already has the home page loaded by the main process.

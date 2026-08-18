@@ -92,6 +92,9 @@
         <button class="sidebar-tab" data-tab="regions" title="Selected regions and conversations">
           Regions <span id="region-count" class="badge"></span>
         </button>
+        <button class="sidebar-tab" data-tab="logs" title="Event log">
+          Logs <span id="log-count" class="badge"></span>
+        </button>
       </div>
       <div id="sidebar-header">
         <span id="sidebar-title" class="panel-title">WordPress</span>
@@ -140,6 +143,13 @@
             </div>
           </div>
         </div>
+        <!-- Logs tab -->
+        <div id="tab-logs" class="tab-panel">
+          <div id="log-toolbar">
+            <button id="log-clear-btn" class="btn btn-ghost btn-small" title="Clear log">Clear</button>
+          </div>
+          <div id="log-entries"></div>
+        </div>
       </div>
     </aside>
 
@@ -168,6 +178,6 @@
     </div>
   </div>
 
-  <script src="app.js?v=3"></script>
+  <script src="app.js?v=4"></script>
 </body>
 </html>
