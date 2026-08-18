@@ -359,10 +359,12 @@ async function handleElementSelected(data) {
       throw new Error(err.error || "Failed to register region");
     }
     const result = await res.json();
-    addRegionCard(result.regionId, regionData);
+    const regionId = result.region?.id;
+    if (!regionId) throw new Error("Server did not return a region ID");
+    addRegionCard(regionId, regionData);
     // Switch to Regions tab so the user sees the new region
     switchTab("regions");
-    log(`Region selected: <${data.tagName}> (id: ${result.regionId.slice(0, 8)})`, "success");
+    log(`Region selected: <${data.tagName}> (id: ${regionId.slice(0, 8)})`, "success");
     setStatus(`Region selected: ${data.tagName}`, "success");
     setTimeout(clearStatus, 2000);
   } catch (err) {
