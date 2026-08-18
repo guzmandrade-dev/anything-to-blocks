@@ -121,15 +121,53 @@ export class WordPressClient {
   }
 
   private async fetchBlockTypes(): Promise<WordPressBlockType[]> {
-    // Try edit context first for full attribute/supports data; fall back to view context
-    // if the edit context is unauthorized or empty.
+    // Prefer the companion plugin endpoint which always returns attributes/supports.
+    const companion = await this.fetchJson<WordPressBlockType[]>("/a2b/v1/block-types");
+    const normalizedCompanion = this.normalizeBlockTypes(companion);
+    if (normalizedCompanion.length > 0) {
+      return normalizedCompanion;
+    }
+
+    // Fall back to core endpoint with edit context for attribute data.
     const edit = await this.fetchJson<WordPressBlockType[]>("/wp/v2/block-types?context=edit");
     const normalizedEdit = this.normalizeBlockTypes(edit);
     if (normalizedEdit.length > 0) {
       return normalizedEdit;
     }
+
+    // Last resort: public list of block types (names only, no attributes).
     const view = await this.fetchJson<WordPressBlockType[]>("/wp/v2/block-types");
     return this.normalizeBlockTypes(view);
+  }
+
+  private async fetchPatterns(): Promise<WordPressBlockPattern[]> {
+    // Core does not expose patterns via REST, so prefer the companion endpoint.
+    const companion = (await this.fetchJson<WordPressBlockPattern[]>("/a2b/v1/block-patterns")) ?? [];
+    if (companion.length > 0) {
+      return companion;
+    }
+    return (await this.fetchJson<WordPressBlockPattern[]>("/wp/v2/block-patterns")) ?? [];
+  }
+
+  private async fetchTemplates(): Promise<{ templates: WordPressTemplate[]; templateParts: WordPressTemplatePart[] }> {
+    // Prefer the companion plugin endpoint (avoids core template auth issues).
+    const companion = await this.fetchJson<(WordPressTemplate | WordPressTemplatePart)[]>("/a2b/v1/templates");
+    if (companion && companion.length > 0) {
+      const templates: WordPressTemplate[] = [];
+      const templateParts: WordPressTemplatePart[] = [];
+      for (const item of companion) {
+        if (item.type === "wp_template_part") {
+          templateParts.push(item as WordPressTemplatePart);
+        } else {
+          templates.push(item as WordPressTemplate);
+        }
+      }
+      return { templates, templateParts };
+    }
+
+    const templates = (await this.fetchJson<WordPressTemplate[]>("/wp/v2/templates")) ?? [];
+    const templateParts = (await this.fetchJson<WordPressTemplatePart[]>("/wp/v2/template-parts")) ?? [];
+    return { templates, templateParts };
   }
 
   async getSiteInfo(): Promise<WordPressSiteInfo> {
@@ -139,23 +177,26 @@ export class WordPressClient {
 
     const siteUrl = this.config.siteUrl.replace(/\/$/, "");
 
-    // Fetch sequentially so cookie-jar updates from WordPress login redirects are
-    // applied to subsequent requests.
-    const root = await this.fetchJson<{ name: string; description: string }>("/");
-    const themesRaw = await this.fetchJson<unknown>("/wp/v2/themes");
-    const themes = this.normalizeThemes(themesRaw);
-    const plugins = (await this.fetchJson<WordPressPlugin[]>("/wp/v2/plugins")) ?? [];
-    const blockTypes = await this.fetchBlockTypes();
-    const blockPatterns = (await this.fetchJson<WordPressBlockPattern[]>("/wp/v2/block-patterns")) ?? [];
-    const templates = (await this.fetchJson<WordPressTemplate[]>("/wp/v2/templates")) ?? [];
-    const templateParts = (await this.fetchJson<WordPressTemplatePart[]>("/wp/v2/template-parts")) ?? [];
+    // Fetch in parallel: each request carries the same auth and independently handles
+    // WordPress Playground login redirects. The cookie jar may be updated by any request
+    // and is reused on the manual redirect retry.
+    const [root, themesRaw, plugins, blockTypes, blockPatterns, templatesResult] = await Promise.all([
+      this.fetchJson<{ name: string; description: string }>("/"),
+      this.fetchJson<unknown>("/wp/v2/themes"),
+      this.fetchJson<WordPressPlugin[]>("/wp/v2/plugins"),
+      this.fetchBlockTypes(),
+      this.fetchPatterns(),
+      this.fetchTemplates()
+    ]);
 
+    const themes = this.normalizeThemes(themesRaw);
     const activeTheme = themes.find((t) => t.status === "active") ?? themes[0] ?? null;
 
     console.log(
       `WordPress site info: theme=${activeTheme?.name ?? "none"}, ` +
-        `plugins=${plugins.length}, blockTypes=${blockTypes.length}, ` +
-        `patterns=${blockPatterns.length}, templates=${templates.length}, templateParts=${templateParts.length}`
+        `plugins=${plugins?.length ?? 0}, blockTypes=${blockTypes?.length ?? 0}, ` +
+        `patterns=${blockPatterns?.length ?? 0}, templates=${templatesResult.templates.length}, ` +
+        `templateParts=${templatesResult.templateParts.length}`
     );
 
     const info: WordPressSiteInfo = {
@@ -163,11 +204,11 @@ export class WordPressClient {
       siteName: root?.name ?? "",
       siteDescription: root?.description ?? "",
       theme: activeTheme ?? null,
-      plugins,
-      blockTypes,
-      blockPatterns,
-      templates,
-      templateParts
+      plugins: plugins ?? [],
+      blockTypes: blockTypes ?? [],
+      blockPatterns: blockPatterns ?? [],
+      templates: templatesResult.templates,
+      templateParts: templatesResult.templateParts
     };
 
     this.cache = info;

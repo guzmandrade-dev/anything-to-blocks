@@ -54,3 +54,8 @@ add_action(
         a2b_register_template_introspection_ability();
     }
 );
+
+/**
+ * Register custom REST API endpoints used by the Electron app.
+ */
+require_once A2B_COMPANION_DIR . 'rest-api.php';
