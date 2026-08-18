@@ -458,7 +458,8 @@ function addRegionCard(regionId, data) {
 
   card.querySelector(".block-copy-btn").addEventListener("click", () => {
     const pre = card.querySelector(".block-output pre");
-    navigator.clipboard.writeText(pre.textContent).then(() => {
+    const clean = stripMarkdownFence(pre.textContent);
+    navigator.clipboard.writeText(clean).then(() => {
       setStatus("Block markup copied", "success");
       setTimeout(clearStatus, 2000);
     });
@@ -564,8 +565,11 @@ async function generateBlock(regionId, customPrompt) {
     if (blockMarkup) {
       const outputEl = card.querySelector(".block-output");
       const pre = outputEl.querySelector("pre");
-      pre.textContent = blockMarkup;
+      pre.textContent = stripMarkdownFence(blockMarkup);
       outputEl.style.display = "block";
+
+      assistantEl.classList.remove("typing");
+      assistantEl.textContent = "Generated Gutenberg block markup.";
 
       region.messages.push({ role: "assistant", content: blockMarkup });
       region.blockMarkup = blockMarkup;
@@ -579,6 +583,17 @@ async function generateBlock(regionId, customPrompt) {
     generateBtn.disabled = false;
     generateBtn.textContent = "Convert to Block";
   }
+}
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+function stripMarkdownFence(text) {
+  if (!text) return "";
+  return text
+    .replace(/^```(?:html)?\s*/i, "")
+    .replace(/\s*```$/, "")
+    .trim();
 }
 
 // ---------------------------------------------------------------------------
