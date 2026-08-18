@@ -33,10 +33,30 @@ export class WordPressClient {
     return `${url}/wp-json`;
   }
 
+  private cookieJar: string | null = null;
+
   private async fetchJson<T>(endpoint: string): Promise<T | null> {
     try {
       const url = `${this.baseUrl}${endpoint}`;
-      const res = await fetch(url, { headers: this.authHeaders });
+      const headers: Record<string, string> = { ...this.authHeaders };
+      if (this.cookieJar) {
+        headers["Cookie"] = this.cookieJar;
+      }
+
+      // Use manual redirect to capture cookies from auto-login redirects
+      // (WordPress Playground redirects /wp-json/* in a loop unless cookies are persisted)
+      let res = await fetch(url, { headers, redirect: "manual" });
+
+      // Handle 302 redirect: capture cookies and retry with them
+      if (res.status >= 300 && res.status < 400) {
+        const setCookies = res.headers.getSetCookie?.() ?? [];
+        if (setCookies.length > 0) {
+          this.cookieJar = setCookies.map((c) => c.split(";")[0]).join("; ");
+          headers["Cookie"] = this.cookieJar;
+        }
+        res = await fetch(url, { headers, redirect: "manual" });
+      }
+
       if (!res.ok) {
         console.warn(`WordPress API ${endpoint} returned ${res.status}`);
         return null;
@@ -87,6 +107,7 @@ export class WordPressClient {
   clearCache(): void {
     this.cache = null;
     this.cacheTime = 0;
+    this.cookieJar = null;
   }
 
   isConnected(): boolean {
