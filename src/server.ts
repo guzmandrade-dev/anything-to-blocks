@@ -41,7 +41,6 @@ function makeAgentConfig(config: AppConfig): AgentConfig {
     command: config.agent.command,
     args: config.agent.args,
     env,
-    model: config.agent.model,
     migrationMode: config.agent.migrationMode,
     blockPrompt: config.agent.blockPrompt
   };
