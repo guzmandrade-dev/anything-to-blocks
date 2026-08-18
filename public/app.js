@@ -99,7 +99,35 @@ async function loadAppConfig() {
   }
   if (!appConfig.agent) appConfig.agent = {};
   if (!appConfig.wordpress) appConfig.wordpress = {};
-  settingsMigrationMode.value = appConfig.agent?.migrationMode ?? "structure";
+
+  // Normalize agent config — persisted config may have stale string values
+  if (typeof appConfig.agent.args === "string") {
+    appConfig.agent.args = appConfig.agent.args.trim().split(/\s+/).filter(Boolean);
+  }
+  if (!Array.isArray(appConfig.agent.args) || appConfig.agent.args.length === 0) {
+    appConfig.agent.args = ["acp"];
+  }
+  if (typeof appConfig.agent.env === "string" && appConfig.agent.env.trim()) {
+    const envObj = {};
+    for (const line of appConfig.agent.env.split("\n")) {
+      const t = line.trim();
+      if (!t || t.startsWith("#")) continue;
+      const eq = t.indexOf("=");
+      if (eq > 0) envObj[t.slice(0, eq).trim()] = t.slice(eq + 1).trim();
+    }
+    appConfig.agent.env = envObj;
+  }
+  if (!appConfig.agent.env || typeof appConfig.agent.env !== "object") {
+    appConfig.agent.env = {};
+  }
+  if (!appConfig.agent.blockPrompt) {
+    // Send undefined so the server's Zod schema applies its default prompt
+    appConfig.agent.blockPrompt = undefined;
+  }
+  if (!appConfig.agent.command) appConfig.agent.command = "opencode";
+  if (!appConfig.agent.migrationMode) appConfig.agent.migrationMode = "structure";
+
+  settingsMigrationMode.value = appConfig.agent.migrationMode;
   settingsCommand.value = appConfig.agent?.command ?? "opencode";
   settingsArgs.value = Array.isArray(appConfig.agent?.args) ? appConfig.agent.args.join(" ") : (appConfig.agent?.args ?? "acp");
   const envObj = appConfig.agent?.env;
