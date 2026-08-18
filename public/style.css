@@ -539,7 +539,8 @@ input[readonly] { background: var(--bg-tertiary); color: var(--text-secondary); 
   font-size: 0.7rem;
 }
 
-.block-output pre {
+.block-output pre,
+.code-artifact pre {
   padding: 8px;
   margin: 0;
   overflow-x: auto;
@@ -548,6 +549,34 @@ input[readonly] { background: var(--bg-tertiary); color: var(--text-secondary); 
   font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
   white-space: pre-wrap;
   word-break: break-word;
+}
+
+.code-artifact {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  margin-top: 8px;
+}
+
+.code-artifact-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 8px;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.code-artifact-title {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.code-artifact-copy {
+  padding: 2px 6px;
+  font-size: 0.7rem;
 }
 
 /* ===== Region Input Area ===== */

@@ -512,7 +512,10 @@ async function sendRegionChat(regionId, message) {
 
     await readSSEStream(res, assistantEl, (text) => {
       const region = regions.get(regionId);
-      if (region) region.messages.push({ role: "assistant", content: text });
+      if (region) {
+        region.messages.push({ role: "assistant", content: text });
+      }
+      updateBlockOutputFromChat(regionId, text);
     });
   } catch (err) {
     assistantEl.classList.remove("typing");
@@ -563,16 +566,17 @@ async function generateBlock(regionId, customPrompt) {
     });
 
     if (blockMarkup) {
+      const code = stripMarkdownFence(blockMarkup);
       const outputEl = card.querySelector(".block-output");
       const pre = outputEl.querySelector("pre");
-      pre.textContent = stripMarkdownFence(blockMarkup);
+      pre.textContent = code;
       outputEl.style.display = "block";
 
       assistantEl.classList.remove("typing");
       assistantEl.textContent = "Generated Gutenberg block markup.";
 
       region.messages.push({ role: "assistant", content: blockMarkup });
-      region.blockMarkup = blockMarkup;
+      region.blockMarkup = code;
     }
   } catch (err) {
     assistantEl.classList.remove("typing");
@@ -594,6 +598,28 @@ function stripMarkdownFence(text) {
     .replace(/^```(?:html)?\s*/i, "")
     .replace(/\s*```$/, "")
     .trim();
+}
+
+function updateBlockOutputFromChat(regionId, text) {
+  const code = extractCodeFromMarkdown(text);
+  if (!code) return;
+  const card = $(`region-${regionId}`);
+  if (!card) return;
+  const outputEl = card.querySelector(".block-output");
+  const pre = outputEl.querySelector("pre");
+  pre.textContent = code;
+  outputEl.style.display = "block";
+  const region = regions.get(regionId);
+  if (region) {
+    region.blockMarkup = code;
+  }
+}
+
+function extractCodeFromMarkdown(text) {
+  if (!text) return "";
+  const fence = /```(?:html)?\s*\n?([\s\S]*?)```/;
+  const match = text.match(fence);
+  return match ? match[1].trim() : "";
 }
 
 // ---------------------------------------------------------------------------
@@ -653,11 +679,56 @@ function addRegionMessage(messagesEl, role, text) {
   wrapper.className = `message-wrapper ${role}`;
   const msg = document.createElement("div");
   msg.className = `message ${role}`;
-  msg.textContent = text;
+  if (role === "assistant" && text) {
+    const { cleanText, code } = splitMarkdownCodeBlock(text);
+    if (code) {
+      msg.append(...renderCodeArtifact(code, cleanText));
+    } else {
+      msg.textContent = cleanText;
+    }
+  } else {
+    msg.textContent = text;
+  }
   wrapper.appendChild(msg);
   messagesEl.appendChild(wrapper);
   messagesEl.scrollTop = messagesEl.scrollHeight;
   return msg;
+}
+
+function splitMarkdownCodeBlock(text) {
+  const fence = /^```(?:html)?\s*\n?([\s\S]*?)```\s*$/i;
+  const match = text.match(fence);
+  if (match) {
+    return { cleanText: match[1].trim(), code: match[1].trim() };
+  }
+  return { cleanText: text, code: "" };
+}
+
+function renderCodeArtifact(code, previewText) {
+  const fragment = document.createDocumentFragment();
+  const preview = document.createElement("div");
+  preview.textContent = previewText.replace(code, "").trim();
+  if (preview.textContent) {
+    fragment.appendChild(preview);
+  }
+  const artifact = document.createElement("div");
+  artifact.className = "code-artifact";
+  artifact.innerHTML = `
+    <div class="code-artifact-header">
+      <span class="code-artifact-title">Gutenberg Block Markup</span>
+      <button class="btn btn-small btn-ghost code-artifact-copy">Copy</button>
+    </div>
+    <pre></pre>
+  `;
+  artifact.querySelector("pre").textContent = code;
+  artifact.querySelector(".code-artifact-copy").addEventListener("click", () => {
+    navigator.clipboard.writeText(code).then(() => {
+      setStatus("Block markup copied", "success");
+      setTimeout(clearStatus, 2000);
+    });
+  });
+  fragment.appendChild(artifact);
+  return fragment;
 }
 
 // ---------------------------------------------------------------------------
