@@ -101,8 +101,11 @@ async function loadAppConfig() {
   if (!appConfig.wordpress) appConfig.wordpress = {};
   settingsMigrationMode.value = appConfig.agent?.migrationMode ?? "structure";
   settingsCommand.value = appConfig.agent?.command ?? "opencode";
-  settingsArgs.value = appConfig.agent?.args ?? "acp";
-  settingsEnv.value = appConfig.agent?.env ?? "";
+  settingsArgs.value = Array.isArray(appConfig.agent?.args) ? appConfig.agent.args.join(" ") : (appConfig.agent?.args ?? "acp");
+  const envObj = appConfig.agent?.env;
+  settingsEnv.value = envObj && typeof envObj === "object" && Object.keys(envObj).length > 0
+    ? Object.entries(envObj).map(([k, v]) => `${k}=${v}`).join("\n")
+    : "";
   settingsBlockPrompt.value = appConfig.agent?.blockPrompt ?? "";
   settingsWpUrl.value = appConfig.wordpress?.siteUrl ?? "";
   settingsWpUser.value = appConfig.wordpress?.username ?? "";
@@ -111,13 +114,34 @@ async function loadAppConfig() {
 }
 
 async function saveAppConfig() {
+  // Parse args: "acp" → ["acp"], "acp --flag" → ["acp", "--flag"]
+  const argsStr = settingsArgs.value.trim() || "acp";
+  const args = argsStr.split(/\s+/).filter(Boolean);
+
+  // Parse env: "KEY=value" lines → { KEY: "value" }
+  const env = {};
+  const envText = settingsEnv.value.trim();
+  if (envText) {
+    for (const line of envText.split("\n")) {
+      const trimmed = line.trim();
+      if (!trimmed || trimmed.startsWith("#")) continue;
+      const eqIdx = trimmed.indexOf("=");
+      if (eqIdx > 0) {
+        env[trimmed.slice(0, eqIdx).trim()] = trimmed.slice(eqIdx + 1).trim();
+      }
+    }
+  }
+
+  // Block prompt: fall back to default if empty
+  const blockPrompt = settingsBlockPrompt.value.trim() || appConfig.agent?.blockPrompt || "";
+
   const config = {
     agent: {
       command: settingsCommand.value.trim() || "opencode",
-      args: settingsArgs.value.trim() || "acp",
-      env: settingsEnv.value.trim(),
+      args,
+      env,
       migrationMode: settingsMigrationMode.value,
-      blockPrompt: settingsBlockPrompt.value.trim(),
+      blockPrompt,
     },
     wordpress: {
       siteUrl: settingsWpUrl.value.trim(),
@@ -132,9 +156,11 @@ async function saveAppConfig() {
   appConfig = config;
   closeSettings();
   log(`Settings saved (WP URL: ${config.wordpress.siteUrl || "none"})`, "info");
-  if (config.wordpress.siteUrl) {
+  // Re-create session with new config so WordPress client picks up new credentials
+  await createSession();
+  if (sessionId && config.wordpress.siteUrl) {
     await fetchWordPressInfo();
-  } else {
+  } else if (!config.wordpress.siteUrl) {
     showWpNotConfigured();
   }
 }
@@ -848,9 +874,12 @@ window.addEventListener("resize", () => updateBrowserBounds());
 (async function init() {
   log("App starting…", "info");
   await loadAppConfig();
-  log(`Config loaded (Electron: ${isElectron}, WP URL: ${appConfig.wordpress?.siteUrl || "none"})`, "info");
+  log(`Config loaded (Electron: ${isElectron ? "yes" : "no"}, WP URL: ${appConfig.wordpress?.siteUrl || "none"})`, "info");
   await createSession();
-  if (appConfig.wordpress?.siteUrl) {
+  if (!sessionId) {
+    log("No session — open Settings to configure the agent and WordPress", "error");
+    showWpNotConfigured();
+  } else if (appConfig.wordpress?.siteUrl) {
     await fetchWordPressInfo();
   } else {
     log("WordPress not configured — open Settings to set up", "warn");
