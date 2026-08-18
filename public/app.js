@@ -35,6 +35,7 @@ const settingsModal = $("settings-modal");
 const settingsMigrationMode = $("settings-migration-mode");
 const settingsCommand = $("settings-command");
 const settingsArgs = $("settings-args");
+const settingsModel = $("settings-model");
 const settingsEnv = $("settings-env");
 const settingsBlockPrompt = $("settings-block-prompt");
 const settingsWpUrl = $("settings-wp-url");
@@ -130,6 +131,7 @@ async function loadAppConfig() {
   settingsMigrationMode.value = appConfig.agent.migrationMode;
   settingsCommand.value = appConfig.agent?.command ?? "opencode";
   settingsArgs.value = Array.isArray(appConfig.agent?.args) ? appConfig.agent.args.join(" ") : (appConfig.agent?.args ?? "acp");
+  settingsModel.value = appConfig.agent?.model ?? "";
   const envObj = appConfig.agent?.env;
   settingsEnv.value = envObj && typeof envObj === "object" && Object.keys(envObj).length > 0
     ? Object.entries(envObj).map(([k, v]) => `${k}=${v}`).join("\n")
@@ -167,6 +169,7 @@ async function saveAppConfig() {
     agent: {
       command: settingsCommand.value.trim() || "opencode",
       args,
+      model: settingsModel.value.trim(),
       env,
       migrationMode: settingsMigrationMode.value,
       blockPrompt,

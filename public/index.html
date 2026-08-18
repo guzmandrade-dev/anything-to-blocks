@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Anything to Blocks</title>
-  <link rel="stylesheet" href="style.css?v=3">
+  <link rel="stylesheet" href="style.css?v=4">
 </head>
 <body>
   <!-- ===== Title Bar ===== -->
@@ -43,6 +43,11 @@
           <label>
             Agent arguments
             <input type="text" id="settings-args" placeholder="acp">
+          </label>
+          <label>
+            Model
+            <span class="field-hint">Model the ACP agent should use (e.g. <code>anthropic/claude-sonnet-4</code>, <code>openai/gpt-4o</code>). Passed as <code>OPENCODE_MODEL</code> env var to the agent.</span>
+            <input type="text" id="settings-model" placeholder="anthropic/claude-sonnet-4">
           </label>
           <label>
             Environment variables

@@ -61,6 +61,7 @@ export const agentConfigSchema = z.object({
   command: z.string().min(1).or(z.undefined()).default("opencode"),
   args: z.array(z.string()).or(z.undefined()).default(["acp"]),
   env: z.record(z.string(), z.string()).or(z.undefined()).default({}),
+  model: z.string().or(z.undefined()).default(""),
   migrationMode: migrationModeSchema.or(z.undefined()).default("structure"),
   blockPrompt: z.string().min(1).or(z.undefined()).default(() => STRUCTURE_PROMPT)
 });
@@ -78,6 +79,7 @@ export const appConfigSchema = z.object({
     command: "opencode",
     args: ["acp"],
     env: {},
+    model: "",
     migrationMode: "structure" as const,
     blockPrompt: STRUCTURE_PROMPT
   })),
