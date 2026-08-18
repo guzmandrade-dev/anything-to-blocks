@@ -162,8 +162,9 @@ async function saveAppConfig() {
     }
   }
 
-  // Block prompt: fall back to default if empty
-  const blockPrompt = settingsBlockPrompt.value.trim() || appConfig.agent?.blockPrompt || "";
+  // Block prompt: send undefined when empty so the server applies its default prompt
+  const rawBlockPrompt = settingsBlockPrompt.value.trim();
+  const blockPrompt = rawBlockPrompt || undefined;
 
   const config = {
     agent: {

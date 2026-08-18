@@ -49,9 +49,14 @@ export interface WordPressSiteInfo {
   templateParts: WordPressTemplatePart[];
 }
 
+export interface WordPressLocalizedString {
+  raw?: string;
+  rendered?: string;
+}
+
 export interface WordPressTheme {
   stylesheet: string;
-  name: string;
+  name: string | WordPressLocalizedString;
   version: string;
   status: string;
 }
